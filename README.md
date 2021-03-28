@@ -36,10 +36,12 @@ All the tests uses the same configuration as Test 1 and are compiled with Go 1.1
 
 ## Results for Test 2
 
-| Name              | FPS  | Duration in ms | syscall/js | n=1000 | time in ms per syscall/js | 
-| ----------------- | ---: | -------------: | ---------- | -----: | ------------------------: |
-| wasm_only         |  5.1 |         196.08 | n*8+8      | 80008  |                     0.019 |
-| wasm_reduce_calls |  5.4 |         185.19 | n*7+9      | 70009  |                     0.021 |
-| helper_js         | 10.0 |         100.00 | n*1+8      | 10008  |                     0.059 |
-| helper2_js        | 10.3 |          97.09 | n+1+8      | 10008  |                     0.056 |
-| js_only           | 24.9 |          40.16 | 0          |     0  |                     0.000 |
+| Name              | FPS  | Duration in ms | Duration only syscall | syscall/js | n=1000 | time in ms per syscall/js | arguments | n=1000 | 2.5 * syscall+arg | time per arg|
+| ----------------- | ---: | -------------: | --------------------- | ---------- | -----: | ------------------------: | --------- | -----: | --------------: | ----------: |
+| wasm_only         |  5.1 |         196.08 |                155.92 | n*8+8      | 80008  |                     0.019 |    n*10+7 |  10007 |           30027 |   0.0051925 |
+| wasm_reduce_calls |  5.4 |         185.19 |                145.03 | n*7+9      | 70009  |                     0.021 |     n*9+7 |   9007 |           26529 |   0.0054665 |
+| helper_js         | 10.0 |         100.00 |                 59.84 | n*1+8      | 10008  |                     0.059 |     n*9+8 |   9008 |           11528 |   0.0051908 |
+| helper2_js        | 10.3 |          97.09 |                 56.93 | n+1+8      | 10008  |                     0.056 |     n*8+7 |   8007 |           10527 |   0.0054077 |
+| js_only           | 24.9 |          40.16 |                  0.00 | 0          |     0  |                     0.000 |         0 |      0 |               0 |   0.0000000 |
+
+The results show that a function argument needs about 5 μs to be transfered and a function call or property needs about 12.5 μs.
