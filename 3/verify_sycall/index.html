@@ -1,0 +1,19 @@
+<html>
+	<head>
+		<title>go webassembly - bouncy</title>
+		<script src="wasm_exec.js"></script>
+		<script>
+			const go = new Go();
+			WebAssembly.instantiateStreaming(fetch('main.wasm'),go.importObject).then( res=> {
+				go.run(res.instance)	
+			})
+		</script>
+	</head>
+	<body>
+		<div id="output">
+		</div>
+		<input id="numberInput" type="number" value="100"/>
+		<div id="result">
+		</div>
+	</body>
+</html>

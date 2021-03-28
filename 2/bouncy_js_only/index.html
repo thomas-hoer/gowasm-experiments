@@ -1,0 +1,216 @@
+<html>
+	<head>
+		<title>go webassembly - bouncy</title>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/monokai.min.css">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+		<script>
+			hljs.configure({tabReplace: '  '});
+
+
+			window.onload = function () {
+				linkRange('count','count-value')
+				linkRange('speed','speed-value')
+				linkRange('size','size-value')
+
+				// html/js code background
+				fetch('index.html').then( res=> res.text()).then(res => {
+					let codeEl = document.getElementById("code")
+					codeEl.innerHTML = res.replace(/&/g,"&amp;")
+																.replace(/>/g,"&gt;")
+																.replace(/</g,"&lt;") 
+					hljs.highlightBlock(codeEl)
+				})
+			}
+			function linkRange(id, idValue) {
+				let El = document.getElementById(id)
+				let valEl = document.getElementById(idValue)
+				El.addEventListener("input", function() { valEl.innerHTML = El.value })
+				valEl.innerHTML = El.value
+			}
+		</script>
+	<style>
+body,pre { margin:0;padding:0; }
+.control-group {
+	display:flex;
+	align-items:center;
+	justify-content: flex-start;
+}
+.control-group label { flex:0; flex-basis: 100px; }
+.control-group input { flex-grow:0; }
+.control-group span { width:50px;}
+.control {
+	position:fixed;
+	padding:20px;
+	background: rgba(0,0,0,0.2);
+	color:#FFF;
+	top:0;right:0;
+}
+#mycanvas {
+	position:fixed;
+	opacity:0.9;
+	width: 100%;
+	height:100%;
+	top:0;right:0;bottom:0;left:0;
+}
+	</style>
+	</head>
+	<body>
+		<div class="code">
+			<pre><code id="code"></code></pre>
+		</div>
+		<canvas id="mycanvas"></canvas>
+		<div class="control">
+			<div id="fps">0</div>
+			<div class="control-group">
+				<label>Speed</label><input id="speed" type="range" min="10" max="1000" value="160"> <span id="speed-value"> 160</span>
+			</div>
+			<div class="control-group">
+				<label>Number of dots</label><input id="count" type="range" min="10" max="1000" value="1000"> <span id="count-value"> 100</span>
+			</div>
+			<div class="control-group">
+				<label>Size</label><input id="size" type="range" min="1" max="10" value="6"> <span id="size-value">6</span>
+			</div>
+			<div class="control-group">
+				<label>Lines</label><input id="lines" type="checkbox">
+			</div>
+			<div class="control-group">
+				<label>dashed</label><input id="dashed" type="checkbox">
+			</div>
+		</div>
+		<script>
+			const doc = document
+			const canvasEl = doc.getElementById('mycanvas')
+			let width = doc.body.clientWidth
+			let height = doc.body.clientHeight
+			canvasEl.width = width
+			canvasEl.height = height
+			const ctx = canvasEl.getContext('2d')
+			const dt = {speed:160,size:6}
+			const lineDistSq = 100*100
+			const setNDots = (dt,n) => {
+				dt.dots = []
+				for (let i = 0;i<n;i++){
+					dt.dots.push({
+						pos: [Math.random()*width,Math.random()*height],
+						dir: [(Math.random()-0.5)*2,(Math.random()-0.5)*2],
+						color: Math.floor(Math.random()*0xFFFFFF)
+					})
+				}
+			}
+			const dtUpdate = (dt,dtTime) => {
+				if (!dt.dots) {
+					return
+				}
+				ctx.clearRect(0,0,width,height)
+				ctx.setLineDash([])
+				if (dt.dashed){
+					ctx.setLineDash([5,10])
+				}
+				// Update
+				for(let i = 0 ;i<dt.dots.length ;i++){
+					const dot = dt.dots[i]
+					// Bounce
+					if (dot.pos[0] < 0) {
+						dot.pos[0] = 0
+						dot.dir[0] = -dot.dir[0]
+					}
+					if (dot.pos[0] > width) {
+						dot.pos[0] = width
+						dot.dir[0] = -dot.dir[0]
+					}
+					if (dot.pos[1] < 0) {
+						dot.pos[1] = 0
+						dot.dir[1] = -dot.dir[1]
+					}
+					if (dot.pos[1] > height) {
+						dot.pos[1] = height
+						dot.dir[1] = -dot.dir[1]
+					}
+					const dir = [...dot.dir]
+
+
+					ctx.globalAlpha = 0.5
+					ctx.beginPath()
+                    ctx.fillStyle = '#'+dot.color.toString(16)
+                    ctx.strokeStyle = '#'+dot.color.toString(16)
+                    ctx.lineWidth = dt.size
+                    ctx.arc(dot.pos[0],dot.pos[1],dt.size,0,2*Math.PI)
+                    ctx.fill()
+
+					if (dt.lines) {
+						for(let j = i+1 ;j<dt.dots.length ;j++){
+							const dot2 = dt.dots[j]
+							const mx = dot2.pos[0] - dot.pos[0]
+							const my = dot2.pos[1] - dot.pos[1]
+							const d = mx*mx + my*my
+							if(d < lineDistSq){
+								ctx.globalAlpha = 1-d/lineDistSq
+								ctx.beginPath()
+								ctx.moveTo(dot.pos[0],dot.pos[1])
+								ctx.lineTo(dot2.pos[0],dot2.pos[1])
+								ctx.stroke()
+							}
+						}
+					}
+
+					dot.pos[0] += dir[0] * dt.speed * dtTime
+					dot.pos[1] += dir[1] * dt.speed * dtTime
+				}
+			}
+			const countChangeEvt = evt => {
+				const intVal = parseInt(evt.target.value)
+				setNDots(dt,intVal)
+			}
+			const speedInputEvt = evt => {
+				const fval = parseFloat(evt.target.value)
+				dt.speed = fval
+			}
+			const sizeChangeEvt = evt => {
+				const intVal = parseInt(evt.target.value)
+				dt.size = intVal
+			}
+			const lineChangeEvt = evt => {
+				dt.lines = evt.target.checked
+			}
+			const dashedChangeEvt = evt => {
+				dt.dashed = evt.target.checked
+			}
+			doc.getElementById('count').addEventListener('change',countChangeEvt)
+			doc.getElementById('speed').addEventListener('input',speedInputEvt)
+			doc.getElementById('size').addEventListener('input',sizeChangeEvt)
+			doc.getElementById('dashed').addEventListener('change',dashedChangeEvt)
+			doc.getElementById('lines').addEventListener('change',lineChangeEvt)
+			
+			dt.lines = false
+			let tmark
+			let markCount = 0
+			let tdiffSum 
+
+			const renderFrame = now => {
+				const tdiff = now -tmark
+				tdiffSum += now - tmark
+				markCount ++
+				if (markCount > 10 ){
+					doc.getElementById('fps').innerHTML = 'FPS: '+ (1000/(tdiffSum/markCount))
+					tdiffSum = 0
+					markCount = 0
+				}
+				tmark = now
+
+				const curBodyW = doc.body.clientWidth
+				const curBodyH = doc.body.clientHeight
+				if (curBodyW != width || curBodyH != height){
+					width = curBodyW
+					height = curBodyH
+					canvasEl.width = width
+					canvasEl.height = height
+				}
+				dtUpdate(dt,tdiff / 1000)
+				requestAnimationFrame(renderFrame)
+			}
+			setTimeout(()=>setNDots(dt,1000),50)
+			requestAnimationFrame(renderFrame)
+
+	    </script>
+    </body>
+</html>
